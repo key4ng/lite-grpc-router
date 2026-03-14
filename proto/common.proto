@@ -1,0 +1,9 @@
+syntax = "proto3";
+package smg.grpc.common;
+
+message GetTokenizerRequest {}
+
+message GetTokenizerChunk {
+  bytes data = 1;
+  string sha256 = 2;
+}
