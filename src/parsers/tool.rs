@@ -19,9 +19,8 @@ pub struct ToolCallParser {
 impl ToolCallParser {
     pub fn new() -> Self {
         let complete_pattern = format!(r"(?s){CALL_BEGIN}.*?{CALL_END}");
-        let detail_pattern = format!(
-            r"(?s){CALL_BEGIN}(.*?){TOOL_SEP}(.*?)\n```json\n(.*?)\n```{CALL_END}"
-        );
+        let detail_pattern =
+            format!(r"(?s){CALL_BEGIN}(.*?){TOOL_SEP}(.*?)\n```json\n(.*?)\n```{CALL_END}");
 
         Self {
             buffer: String::new(),

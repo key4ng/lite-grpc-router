@@ -72,7 +72,9 @@ async fn main() -> Result<()> {
             .await
             .with_context(|| format!("failed to connect to {url}"))?;
 
-        let model_info = client.get_model_info().await
+        let model_info = client
+            .get_model_info()
+            .await
             .with_context(|| format!("failed to get model info from {url}"))?;
         eprintln!("OK (model: {})", model_info.served_model_name);
 
@@ -82,11 +84,22 @@ async fn main() -> Result<()> {
     let model_name = workers[0].model_name.clone();
 
     eprint!("Loading tokenizer from {}... ", cli.backends[0]);
-    let tokenizer_stream = workers[0].client.get_tokenizer().await
+    let tokenizer_stream = workers[0]
+        .client
+        .get_tokenizer()
+        .await
         .context("failed to start tokenizer download")?;
-    let loaded = tokenizer::load_tokenizer_from_rpc(tokenizer_stream).await
+    let loaded = tokenizer::load_tokenizer_from_rpc(tokenizer_stream)
+        .await
         .context("failed to load tokenizer")?;
-    eprintln!("OK (chat template: {})", if loaded.chat_template.is_some() { "found" } else { "not found" });
+    eprintln!(
+        "OK (chat template: {})",
+        if loaded.chat_template.is_some() {
+            "found"
+        } else {
+            "not found"
+        }
+    );
 
     let pool = WorkerPool::new(workers);
     let state = Arc::new(AppState {

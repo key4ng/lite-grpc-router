@@ -49,7 +49,9 @@ impl SglangClient {
     ) -> Result<tonic::Streaming<crate::proto::common::GetTokenizerChunk>> {
         let mut client = self.client.clone();
         let response = client
-            .get_tokenizer(tonic::Request::new(crate::proto::common::GetTokenizerRequest {}))
+            .get_tokenizer(tonic::Request::new(
+                crate::proto::common::GetTokenizerRequest {},
+            ))
             .await
             .context("get_tokenizer RPC failed")?;
         Ok(response.into_inner())

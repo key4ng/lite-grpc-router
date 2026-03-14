@@ -8,9 +8,9 @@ use axum::response::{IntoResponse, Response};
 use axum::Json;
 use uuid::Uuid;
 
-use crate::proto::sglang::{self, generate_response};
 use crate::parsers::reasoning::ReasoningParser;
 use crate::parsers::tool::ToolCallParser;
+use crate::proto::sglang::{self, generate_response};
 use crate::streaming::build_sse_stream;
 use crate::types::*;
 use crate::worker::WorkerPool;
@@ -33,23 +33,20 @@ pub async fn chat_completions(
         .unwrap_or_default()
         .as_secs() as i64;
 
-    let worker = state.pool.select().await.map_err(|e| {
-        (StatusCode::SERVICE_UNAVAILABLE, e.to_string())
-    })?;
+    let worker = state
+        .pool
+        .select()
+        .await
+        .map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e.to_string()))?;
 
     let (text, token_ids) = tokenize_messages(
         &state.tokenizer,
         state.chat_template.as_deref(),
         &req.messages,
-    ).map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    )
+    .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
 
-    let proto_req = build_generate_request(
-        &request_id,
-        text,
-        token_ids,
-        &req,
-        is_stream,
-    );
+    let proto_req = build_generate_request(&request_id, text, token_ids, &req, is_stream);
 
     let grpc_stream = worker.client.generate(proto_req).await.map_err(|e| {
         worker.mark_unhealthy();
@@ -89,10 +86,12 @@ fn tokenize_messages(
 ) -> Result<(String, Vec<u32>)> {
     let msg_values: Vec<serde_json::Value> = messages
         .iter()
-        .map(|m| serde_json::json!({
-            "role": m.role,
-            "content": m.content.clone().unwrap_or_default(),
-        }))
+        .map(|m| {
+            serde_json::json!({
+                "role": m.role,
+                "content": m.content.clone().unwrap_or_default(),
+            })
+        })
         .collect();
 
     let text = if let Some(template) = chat_template {
@@ -190,7 +189,11 @@ async fn collect_response(
 
     let message = Message {
         role: "assistant".to_string(),
-        content: if content.is_empty() { None } else { Some(content) },
+        content: if content.is_empty() {
+            None
+        } else {
+            Some(content)
+        },
         reasoning_content: if reasoning_result.reasoning_text.is_empty() {
             None
         } else {
@@ -199,14 +202,19 @@ async fn collect_response(
         tool_calls: if tool_calls.is_empty() {
             None
         } else {
-            Some(tool_calls.into_iter().map(|tc| ToolCall {
-                id: tc.id,
-                r#type: "function".to_string(),
-                function: FunctionCall {
-                    name: tc.name,
-                    arguments: tc.arguments,
-                },
-            }).collect())
+            Some(
+                tool_calls
+                    .into_iter()
+                    .map(|tc| ToolCall {
+                        id: tc.id,
+                        r#type: "function".to_string(),
+                        function: FunctionCall {
+                            name: tc.name,
+                            arguments: tc.arguments,
+                        },
+                    })
+                    .collect(),
+            )
         },
         tool_call_id: None,
     };

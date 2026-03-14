@@ -41,7 +41,9 @@ pub async fn load_tokenizer_from_rpc(
     let cursor = Cursor::new(&data);
     let mut archive = zip::ZipArchive::new(cursor).context("failed to open tokenizer zip")?;
     let temp_dir = tempfile::tempdir().context("failed to create temp dir")?;
-    archive.extract(temp_dir.path()).context("failed to extract tokenizer zip")?;
+    archive
+        .extract(temp_dir.path())
+        .context("failed to extract tokenizer zip")?;
 
     load_from_dir(temp_dir.path())
 }
@@ -87,11 +89,14 @@ pub fn apply_chat_template(
     add_generation_prompt: bool,
 ) -> Result<String> {
     let mut env = minijinja::Environment::new();
-    env.add_template("chat", template).context("invalid chat template")?;
+    env.add_template("chat", template)
+        .context("invalid chat template")?;
     let tmpl = env.get_template("chat").context("template not found")?;
-    let result = tmpl.render(minijinja::context! {
-        messages => messages,
-        add_generation_prompt => add_generation_prompt,
-    }).context("failed to render chat template")?;
+    let result = tmpl
+        .render(minijinja::context! {
+            messages => messages,
+            add_generation_prompt => add_generation_prompt,
+        })
+        .context("failed to render chat template")?;
     Ok(result)
 }

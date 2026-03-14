@@ -4,9 +4,9 @@ use axum::response::sse::{Event, Sse};
 use futures::stream::{self, Stream, StreamExt};
 use tonic::Streaming;
 
-use crate::proto::sglang::{GenerateResponse, generate_response};
 use crate::parsers::reasoning::ReasoningParser;
 use crate::parsers::tool::ToolCallParser;
+use crate::proto::sglang::{generate_response, GenerateResponse};
 use crate::types::*;
 
 /// Build an SSE stream from a gRPC GenerateResponse stream.
@@ -29,14 +29,12 @@ pub fn build_sse_stream(
         }
     });
 
-    let stream = grpc_stream.map(move |result: Result<GenerateResponse, tonic::Status>| {
-        match result {
-            Ok(response) => {
-                match response.response {
+    let stream = grpc_stream
+        .map(
+            move |result: Result<GenerateResponse, tonic::Status>| match result {
+                Ok(response) => match response.response {
                     Some(generate_response::Response::Chunk(chunk)) => {
-                        let text = tokenizer
-                            .decode(&chunk.token_ids, true)
-                            .unwrap_or_default();
+                        let text = tokenizer.decode(&chunk.token_ids, true).unwrap_or_default();
 
                         if text.is_empty() {
                             return None;
@@ -64,8 +62,10 @@ pub fn build_sse_stream(
                         }
                         if !tool_calls.is_empty() {
                             delta.tool_calls = Some(
-                                tool_calls.iter().enumerate().map(|(i, tc)| {
-                                    ChunkToolCall {
+                                tool_calls
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(i, tc)| ChunkToolCall {
                                         index: i as u32,
                                         id: Some(tc.id.clone()),
                                         r#type: Some("function".to_string()),
@@ -73,8 +73,8 @@ pub fn build_sse_stream(
                                             name: Some(tc.name.clone()),
                                             arguments: Some(tc.arguments.clone()),
                                         },
-                                    }
-                                }).collect(),
+                                    })
+                                    .collect(),
                             );
                         }
 
@@ -123,16 +123,13 @@ pub fn build_sse_stream(
                         Some(Event::default().data(error_json.to_string()))
                     }
                     None => None,
-                }
-            }
-            Err(_) => None,
-        }
-    })
-    .filter_map(|opt: Option<Event>| async { opt })
-    .chain(stream::once(async {
-        Event::default().data("[DONE]")
-    }))
-    .map(Ok);
+                },
+                Err(_) => None,
+            },
+        )
+        .filter_map(|opt: Option<Event>| async { opt })
+        .chain(stream::once(async { Event::default().data("[DONE]") }))
+        .map(Ok);
 
     Sse::new(stream)
 }
