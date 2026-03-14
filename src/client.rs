@@ -1,16 +1,7 @@
 use anyhow::{Context, Result};
 use tonic::transport::Channel;
 
-// Import generated proto types for sglang scheduler.
-// Note: the common proto (smg.grpc.common) is included at crate root in main.rs
-// so that cross-package references in the generated code resolve correctly.
-pub mod proto {
-    pub mod sglang {
-        tonic::include_proto!("sglang.grpc.scheduler");
-    }
-}
-
-use proto::sglang::sglang_scheduler_client::SglangSchedulerClient;
+use crate::proto::sglang::sglang_scheduler_client::SglangSchedulerClient;
 
 pub struct SglangClient {
     client: SglangSchedulerClient<Channel>,
@@ -43,8 +34,8 @@ impl SglangClient {
 
     pub async fn generate(
         &self,
-        req: proto::sglang::GenerateRequest,
-    ) -> Result<tonic::Streaming<proto::sglang::GenerateResponse>> {
+        req: crate::proto::sglang::GenerateRequest,
+    ) -> Result<tonic::Streaming<crate::proto::sglang::GenerateResponse>> {
         let mut client = self.client.clone();
         let response = client
             .generate(tonic::Request::new(req))
@@ -55,21 +46,21 @@ impl SglangClient {
 
     pub async fn get_tokenizer(
         &self,
-    ) -> Result<tonic::Streaming<crate::smg::grpc::common::GetTokenizerChunk>> {
+    ) -> Result<tonic::Streaming<crate::proto::common::GetTokenizerChunk>> {
         let mut client = self.client.clone();
         let response = client
-            .get_tokenizer(tonic::Request::new(
-                crate::smg::grpc::common::GetTokenizerRequest {},
-            ))
+            .get_tokenizer(tonic::Request::new(crate::proto::common::GetTokenizerRequest {}))
             .await
             .context("get_tokenizer RPC failed")?;
         Ok(response.into_inner())
     }
 
-    pub async fn get_model_info(&self) -> Result<proto::sglang::GetModelInfoResponse> {
+    pub async fn get_model_info(&self) -> Result<crate::proto::sglang::GetModelInfoResponse> {
         let mut client = self.client.clone();
         let response = client
-            .get_model_info(tonic::Request::new(proto::sglang::GetModelInfoRequest {}))
+            .get_model_info(tonic::Request::new(
+                crate::proto::sglang::GetModelInfoRequest {},
+            ))
             .await
             .context("get_model_info RPC failed")?;
         Ok(response.into_inner())
@@ -78,7 +69,9 @@ impl SglangClient {
     pub async fn health_check(&self) -> Result<bool> {
         let mut client = self.client.clone();
         let response = client
-            .health_check(tonic::Request::new(proto::sglang::HealthCheckRequest {}))
+            .health_check(tonic::Request::new(
+                crate::proto::sglang::HealthCheckRequest {},
+            ))
             .await
             .context("health_check RPC failed")?;
         Ok(response.into_inner().healthy)
