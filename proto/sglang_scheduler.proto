@@ -1,0 +1,122 @@
+syntax = "proto3";
+package sglang.grpc.scheduler;
+
+import "common.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+service SglangScheduler {
+  rpc Generate(GenerateRequest) returns (stream GenerateResponse);
+  rpc GetTokenizer(smg.grpc.common.GetTokenizerRequest) returns (stream smg.grpc.common.GetTokenizerChunk);
+  rpc GetModelInfo(GetModelInfoRequest) returns (GetModelInfoResponse);
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message TokenizedInput {
+  string original_text = 1;
+  repeated uint32 input_ids = 2;
+}
+
+message SamplingParams {
+  float temperature = 1;
+  float top_p = 2;
+  int32 top_k = 3;
+  float min_p = 4;
+  float frequency_penalty = 5;
+  float presence_penalty = 6;
+  float repetition_penalty = 7;
+  optional uint32 max_new_tokens = 8;
+  repeated string stop = 9;
+  repeated uint32 stop_token_ids = 10;
+  bool skip_special_tokens = 11;
+  bool spaces_between_special_tokens = 12;
+  oneof constraint {
+    string regex = 13;
+    string json_schema = 14;
+    string ebnf_grammar = 15;
+    string structural_tag = 16;
+  }
+  uint32 n = 17;
+  uint32 min_new_tokens = 18;
+  bool ignore_eos = 19;
+  bool no_stop_trim = 20;
+  optional int32 stream_interval = 21;
+  map<string, float> logit_bias = 22;
+  google.protobuf.Struct custom_params = 23;
+}
+
+message GenerateRequest {
+  string request_id = 1;
+  TokenizedInput tokenized = 2;
+  // field 3 (mm_inputs) removed
+  SamplingParams sampling_params = 4;
+  bool return_logprob = 5;
+  int32 logprob_start_len = 6;
+  int32 top_logprobs_num = 7;
+  repeated uint32 token_ids_logprob = 8;
+  bool return_hidden_states = 9;
+  // field 10 (disaggregated_params) removed
+  string custom_logit_processor = 11;
+  google.protobuf.Timestamp timestamp = 12;
+  bool log_metrics = 13;
+  repeated float input_embeds = 14;
+  string lora_id = 15;
+  int32 data_parallel_rank = 16;
+  bool stream = 17;
+}
+
+message GenerateResponse {
+  string request_id = 1;
+  oneof response {
+    GenerateStreamChunk chunk = 2;
+    GenerateComplete complete = 3;
+    GenerateError error = 4;
+  }
+}
+
+message GenerateStreamChunk {
+  repeated uint32 token_ids = 1;
+  uint32 prompt_tokens = 2;
+  uint32 completion_tokens = 3;
+  uint32 cached_tokens = 4;
+  // field 5 (output_logprobs) removed
+  // field 6 (hidden_states) removed
+  // field 7 (input_logprobs) removed
+  uint32 index = 8;
+}
+
+message GenerateComplete {
+  repeated uint32 output_ids = 1;
+  string finish_reason = 2;
+  uint32 prompt_tokens = 3;
+  uint32 completion_tokens = 4;
+  uint32 cached_tokens = 5;
+  // field 6 (output_logprobs) removed
+  // field 7 (all_hidden_states) removed
+  oneof matched_stop {
+    uint32 matched_token_id = 8;
+    string matched_stop_str = 9;
+  }
+  // field 10 (input_logprobs) removed
+  uint32 index = 11;
+}
+
+message GenerateError {
+  string message = 1;
+}
+
+message GetModelInfoRequest {}
+
+message GetModelInfoResponse {
+  string model_path = 1;
+  // field 2 (tokenizer_path) removed
+  bool is_generation = 3;
+  // fields 4-5 removed
+  string served_model_name = 6;
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  bool healthy = 1;
+}

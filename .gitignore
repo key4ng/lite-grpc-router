@@ -1,0 +1,3 @@
+/target
+genai_bench.log
+genai_bench_worker_*.log
