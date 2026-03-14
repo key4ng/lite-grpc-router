@@ -1,5 +1,8 @@
 mod client;
+mod parsers;
 mod tokenizer;
+mod types;
+mod worker;
 
 // Proto modules: hierarchy must match proto package names so tonic's
 // generated cross-package super:: references resolve correctly.
