@@ -19,7 +19,7 @@ lite-grpc connects to SGLang backends running in gRPC mode. Start one with:
 
 ```sh
 python -m sglang.launch_server \
-  --model-path deepseek-ai/DeepSeek-R1-Distill-Llama-8B \
+  --model-path deepseek-ai/DeepSeek-R1 \
   --host 0.0.0.0 \
   --port 30000 \
   --grpc-mode
