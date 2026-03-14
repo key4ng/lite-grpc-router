@@ -13,6 +13,20 @@ Minimal Rust gRPC router that proxies OpenAI-compatible HTTP requests to [SGLang
 - Round-robin worker pool with health checking
 - Multiple backend support
 
+## Prerequisites: Start an SGLang Backend
+
+lite-grpc connects to SGLang backends running in gRPC mode. Start one with:
+
+```sh
+python -m sglang.launch_server \
+  --model-path deepseek-ai/DeepSeek-R1-Distill-Llama-8B \
+  --host 0.0.0.0 \
+  --port 30000 \
+  --grpc-mode
+```
+
+For multiple backends (e.g., prefill-decode disaggregation), start additional instances on different ports and pass them all via `--backend`.
+
 ## Usage
 
 ```sh
