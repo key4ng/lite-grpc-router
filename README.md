@@ -1,6 +1,6 @@
-# lite-grpc
+# lite-grpc-router
 
-Minimal Rust gRPC router that proxies OpenAI-compatible HTTP requests to [SGLang](https://github.com/sgl-project/sglang) backends. Built for learning and benchmarking.
+A nano version of [SMG](https://github.com/lightseekorg/smg)'s [gRPC router](https://github.com/lightseekorg/smg/tree/main/model_gateway/src/routers/grpc) — a minimal Rust gRPC router that proxies OpenAI-compatible HTTP requests to [SGLang](https://github.com/sgl-project/sglang) gRPC backends. Built as a learning and onboarding project to understand how model-serving gateways work end-to-end — from HTTP request handling and chat template rendering, through gRPC communication with inference engines, to streaming response parsing with reasoning and tool call extraction.
 
 ## Features
 
@@ -190,7 +190,23 @@ Tested with DeepSeek-R1-Distill-Qwen-32B, D(100,100), 2x H100 TP=2. **Bold** = b
 |  | P5 | 13.5 | **14.2** | 14.0 | +4.8% | +3.7% |
 |  | P1 | 12.7 | **13.6** | 13.5 | +7.6% | +6.9% |
 
-gRPC routers (lite-grpc and SMG) consistently outperform SGLang's native HTTP server on tail latency and worst-case throughput, with the gap widening at higher concurrency.
+**Summary**
+
+The gRPC routing layer provides the most benefit where it matters most: tail latencies and worst-case throughput.
+
+- **Tail latency (P95/P99) is where gRPC shines.** lite-grpc reduces P99 TTFT by up to 34% and P99 E2E latency by up to 13% compared to SGLang HTTP. The improvement is consistent across all concurrency levels. This is because gRPC's binary framing and HTTP/2 multiplexing avoid the overhead of SGLang's Python HTTP stack (FastAPI/Uvicorn), which adds serialization, middleware, and GIL contention under load.
+
+- **Median latency (P50) is similar across all three.** At the median, the GPU inference time (~2s at 64 concurrency) dominates, making the routing overhead negligible. The router adds only a few milliseconds, which is invisible at this scale.
+
+- **HTTP has better mean/P50 TTFT at low concurrency.** This is expected — direct HTTP to SGLang skips one network hop. The gRPC routers add a small fixed overhead for request proxying. However, this advantage disappears at 512 concurrency where HTTP's Python server starts to saturate.
+
+- **Mean input throughput numbers should be taken with caution.** genai-bench occasionally reports extreme outlier values (e.g., 90,000+ tok/s for individual requests) due to measurement artifacts in its streaming response parser. These outliers inflate the mean significantly — for example, HTTP's mean input throughput appears higher at low concurrency primarily because of a few extreme readings, not genuine throughput advantage. The P50 and tail percentiles (P5/P1/P95/P99) are more reliable indicators of real-world performance.
+
+- **Worst-case throughput (P1/P5) strongly favors gRPC.** The slowest requests under HTTP are significantly slower — P1 input throughput is up to 54% lower than gRPC at 64 concurrency. This means gRPC provides more consistent, predictable performance with fewer outliers.
+
+- **lite-grpc slightly outperforms SMG.** lite-grpc wins 24 out of 32 tail-metric comparisons (P95/P99/P5/P1). This is expected — lite-grpc is a minimal ~1000-line router with zero middleware, while SMG includes policy engines, auth, metrics, and plugin support. The tradeoff is features vs raw performance.
+
+- **Output throughput gap narrows at high concurrency.** At 256-512 concurrency, the GPU becomes the bottleneck and all three approaches converge. The router overhead becomes irrelevant when requests are queued waiting for GPU compute.
 
 ## Architecture
 
